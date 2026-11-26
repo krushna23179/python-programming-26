@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=e70c97dc-1784-4c63-842f-f2dc7123b1ae
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. --><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Global Crime Intelligence System</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+:root{--bg:#080d18;--panel:#101a2b;--panel2:#142238;--line:#263650;--txt:#edf4ff;--muted:#8da2bd;--cyan:#42d6d0;--red:#ff667d;--gold:#ffca69}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#14243b 0,transparent 38%),var(--bg);color:var(--txt);font:15px/1.5 Inter,Segoe UI,Arial,sans-serif}
+header{padding:28px clamp(18px,4vw,58px) 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;gap:13px;align-items:center}.logo{width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,#1a9f9a,#3156a4);display:grid;place-items:center;font-size:23px}
+h1{font-size:clamp(20px,3vw,29px);margin:0;letter-spacing:.2px}header p{margin:3px 0 0;color:var(--muted);font-size:13px}.status{font-size:12px;color:var(--cyan);border:1px solid #23605e;padding:7px 11px;border-radius:20px}
+main{max-width:1500px;margin:auto;padding:24px clamp(14px,3vw,42px) 60px}.controls{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:18px}
+.field{display:grid;gap:6px;color:var(--muted);font-size:12px}select,input{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:9px;padding:11px 13px;min-width:175px;font:inherit}
+button{background:#167c82;border:0;color:white;padding:11px 16px;border-radius:9px;font-weight:650;cursor:pointer}button:hover{filter:brightness(1.12)}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:16px 0}.card,.panel{background:linear-gradient(145deg,var(--panel),#0e1726);border:1px solid var(--line);border-radius:15px;padding:17px;min-width:0}
+.metric-label{font-size:12px;color:var(--muted)}.metric{font-size:27px;font-weight:750;margin-top:5px}.metric-sub{font-size:11px;color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.85fr);gap:14px}.panel h2{font-size:16px;margin:0 0 4px}.hint{font-size:12px;color:var(--muted);margin:0 0 12px}.map{height:470px}.chart{height:245px}
+.lower{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.country-title{font-size:22px;font-weight:750}.pill{display:inline-block;padding:4px 9px;border-radius:30px;background:#1c344b;color:var(--cyan);font-size:11px;margin:5px 0 10px}
+.scoregrid{display:grid;grid-template-columns:1fr auto;gap:7px;font-size:13px}.scoregrid span:nth-child(odd){color:var(--muted)}.scoregrid span:nth-child(even){font-weight:650}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:9px 7px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:550}
+.insights{display:grid;gap:8px}.insight{background:var(--panel2);border-radius:9px;padding:10px 12px;font-size:13px}
+footer{margin-top:22px;color:var(--muted);font-size:11px;line-height:1.6}.error{padding:15px;background:#381d2a;color:#ffdce2;border:1px solid #703548;border-radius:10px}
+@media(max-width:900px){.layout,.lower{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}.map{height:390px}}
+@media(max-width:480px){.cards{grid-template-columns:1fr 1fr}.metric{font-size:22px}select{width:100%}.field{flex:1;min-width:140px}}
+</style></head>
+<body>
+<header><div class="brand"><div class="logo">◈</div><div><h1>Global Crime Intelligence System</h1><p>Explore organized crime patterns, country scores and global trends</p></div></div><div class="status" id="status">● Connecting to open dataset…</div></header>
+<main>
+<div class="controls">
+<label class="field">Index year<select id="year"><option>2025</option><option>2023</option><option>2021</option></select></label>
+<label class="field">Indicator<select id="indicator">
+<option value="Criminality_avg">Overall criminality</option><option value="Criminal_markets_avg">Criminal markets</option><option value="Criminal_actors_avg">Criminal actors</option><option value="Human_trafficking">Human trafficking</option><option value="Human_smuggling">Human smuggling</option><option value="Cocaine_trade">Cocaine trade</option><option value="Cyber_dependent_crimes">Cyber-dependent crimes</option><option value="Financial_crimes">Financial crimes</option><option value="Flora_crimes">Flora crimes</option><option value="Fauna_crimes">Fauna crimes</option><option value="Resilience_avg">Resilience</option><option value="Law_enforcement">Law enforcement</option><option value="Government_transparency_accountability">Government transparency & accountability</option>
+</select></label>
+<label class="field">Find a country<input id="search" list="countries" placeholder="Search country…"><datalist id="countries"></datalist></label>
+<button id="reset">Reset view</button>
+</div>
+<div id="error" hidden></div>
+<div class="cards">
+<div class="card"><div class="metric-label">Countries covered</div><div class="metric" id="countriesCount">—</div><div class="metric-sub">In selected edition</div></div>
+<div class="card"><div class="metric-label">Global average score</div><div class="metric" id="globalAvg">—</div><div class="metric-sub">Scale: 1 to 10</div></div>
+<div class="card"><div class="metric-label">Highest-scoring country</div><div class="metric" id="topCountry">—</div><div class="metric-sub" id="topScore">Selected indicator</div></div>
+<div class="card"><div class="metric-label">Lowest-scoring country</div><div class="metric" id="lowCountry">—</div><div class="metric-sub" id="lowScore">Selected indicator</div></div>
+</div>
+<div class="layout">
+<section class="panel"><h2>Global crime map</h2><p class="hint">Select a country on the map to open its profile. Darker shading indicates a higher score.</p><div id="map" class="map"></div></section>
+<section class="panel"><h2>Country intelligence</h2><p class="hint">Selected country · score details and historical direction</p><div id="profile"><div class="country-title">Select a country</div><p class="hint">Click a country on the map or search above.</p></div><div id="trend" class="chart"></div></section>
+</div>
+<div class="lower">
+<section class="panel"><h2>Top 10 countries</h2><p class="hint">Ranked by the selected indicator and edition year</p><div id="ranking"></div></section>
+<section class="panel"><h2>Country comparison</h2><p class="hint">Compare the selected country with another country</p><label class="field">Compare with<select id="compare"></select></label><div id="comparison" class="chart"></div></section>
+</div>
+<section class="panel" style="margin-top:14px"><h2>Automated insights</h2><p class="hint">Simple observations calculated from the selected dataset view</p><div id="insights" class="insights"></div></section>
+<footer>Data: Global Organized Crime Index dataset, Global Initiative Against Transnational Organized Crime (GI-TOC), mirrored CSV dataset. Scores are expert-assessed index scores on a 1–10 scale; they are NOT crime counts, incident totals or crime rates per 100,000 people. Resilience indicators describe institutional responses and should be interpreted separately from criminality. Dataset editions and methodology may change. <a href="https://ocindex.net/downloads" target="_blank" style="color:var(--cyan)">Official data and methodology</a> · <a href="https://huggingface.co/datasets/jason1966/abbas829_global-organized-crime-index-20212025" target="_blank" style="color:var(--cyan)">CSV mirror</a></footer>
+</main>
+<script>
+const DATA_URL='https://huggingface.co/datasets/jason1966/abbas829_global-organized-crime-index-20212025/resolve/main/global_oc_index.csv';
+let rows=[],selected='India';
+const $=id=>document.getElementById(id), val=(r,k)=>Number(r[k]);
+const label=k=>({Criminality_avg:'Overall criminality',Criminal_markets_avg:'Criminal markets',Criminal_actors_avg:'Criminal actors',Resilience_avg:'Resilience',Human_trafficking:'Human trafficking',Human_smuggling:'Human smuggling',Cocaine_trade:'Cocaine trade',Cyber_dependent_crimes:'Cyber-dependent crimes',Financial_crimes:'Financial crimes',Flora_crimes:'Flora crimes',Fauna_crimes:'Fauna crimes',Law_enforcement:'Law enforcement',Government_transparency_accountability:'Government transparency & accountability'}[k]||k.replaceAll('_',' '));
+const layout={paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{color:'#dce8f8'},margin:{l:35,r:15,t:15,b:35},xaxis:{gridcolor:'#263650'},yaxis:{gridcolor:'#263650'}};
+function current(){return rows.filter(r=>+r.Year===+$('year').value)}
+function chosen(){return $('indicator').value}
+function plotMap(data){
+const k=chosen(),z=data.map(r=>val(r,k));
+Plotly.newPlot('map',[{type:'choropleth',locationmode:'country names',locations:data.map(r=>r.Country),z,zmin:1,zmax:10,text:data.map(r=>`${r.Country}<br>${label(k)}: ${val(r,k).toFixed(2)}`),hovertemplate:'%{text}<extra></extra>',colorscale:[[0,'#18344a'],[.35,'#247b82'],[.7,'#e4a34e'],[1,'#d94e66']],marker:{line:{color:'#0a1320',width:.5}},colorbar:{title:'Score',tickfont:{color:'#9db0c9'}}}],{...layout,margin:{l:0,r:0,t:0,b:0},geo:{bgcolor:'rgba(0,0,0,0)',showframe:false,showcoastlines:false,landcolor:'#142238',projection:{type:'natural earth'}}},{responsive:true,displayModeBar:false});
+$('map').on('plotly_click',e=>{if(e.points?.[0]?.location){selected=e.points[0].location;render()}});
+}
+function countryYears(name){return rows.filter(r=>r.Country===name).sort((a,b)=>+a.Year-+b.Year)}
+function profile(data){
+let r=data.find(x=>x.Country===selected)||data.find(x=>x.Country==='India')||data[0];if(!r)return;
+selected=r.Country;let all=countryYears(selected),k=chosen();
+$('profile').innerHTML=`<div class="country-title">${r.Country}</div><div class="pill">${r.Continent||'Country'} · ${r.Year}</div><div class="metric" style="font-size:34px">${val(r,k).toFixed(2)} <span style="font-size:13px;color:var(--muted)">/ 10</span></div><p class="hint">${label(k)}</p><div class="scoregrid">${[['Overall criminality','Criminality_avg'],['Criminal markets','Criminal_markets_avg'],['Criminal actors','Criminal_actors_avg'],['Resilience','Resilience_avg'],['Human trafficking','Human_trafficking'],['Human smuggling','Human_smuggling'],['Cocaine trade','Cocaine_trade'],['Cyber crimes','Cyber_dependent_crimes'],['Law enforcement','Law_enforcement']].map(([n,key])=>`<span>${n}</span><span>${r[key]===''||r[key]==null?'—':Number(r[key]).toFixed(2)}</span>`).join('')}</div>`;
+Plotly.newPlot('trend',[{x:all.map(x=>x.Year),y:all.map(x=>val(x,k)),type:'scatter',mode:'lines+markers',line:{color:'#42d6d0',width:3},marker:{size:9}}],{...layout,title:{text:'Historical trend · '+label(k),font:{size:12}},margin:{l:35,r:10,t:38,b:30},yaxis:{...layout.yaxis,range:[0,10]}},{responsive:true,displayModeBar:false});
+}
+function render(){
+if(!rows.length)return;let data=current().filter(r=>Number.isFinite(val(r,chosen()))),k=chosen();data.sort((a,b)=>val(b,k)-val(a,k));
+$('countriesCount').textContent=data.length;$('globalAvg').textContent=(data.reduce((s,r)=>s+val(r,k),0)/data.length).toFixed(2);
+$('topCountry').textContent=data[0]?.Country||'—';$('topScore').textContent=data[0]?val(data[0],k).toFixed(2)+' / 10':'';
+$('lowCountry').textContent=data.at(-1)?.Country||'—';$('lowScore').textContent=data.at(-1)?val(data.at(-1),k).toFixed(2)+' / 10':'';
+plotMap(data);profile(data);
+$('ranking').innerHTML='<table><thead><tr><th>Rank</th><th>Country</th><th>Score</th></tr></thead><tbody>'+data.slice(0,10).map((r,i)=>`<tr><td>${i+1}</td><td>${r.Country}</td><td>${val(r,k).toFixed(2)}</td></tr>`).join('')+'</tbody></table>';
+const names=data.map(r=>r.Country).sort();$('compare').innerHTML=names.map(n=>`<option>${n}</option>`).join('');$('compare').value=names.includes('China')?'China':names.find(n=>n!==selected)||names[0];
+comparison(data);
+const prev=countryYears(selected),first=prev[0],last=prev.at(-1),delta=first&&last?val(last,'Criminality_avg')-val(first,'Criminality_avg'):0;
+$('insights').innerHTML=`<div class="insight"><b>Highest ${label(k)}:</b> ${data[0].Country} (${val(data[0],k).toFixed(2)}/10).</div><div class="insight"><b>Lowest ${label(k)}:</b> ${data.at(-1).Country} (${val(data.at(-1),k).toFixed(2)}/10).</div><div class="insight"><b>${selected} trend:</b> ${prev.length>1?(delta>0?'Criminality score increased':delta<0?'Criminality score decreased':'Criminality score was unchanged')+' by '+Math.abs(delta).toFixed(2)+' points between '+first.Year+' and '+last.Year+'.':'Not enough years for a trend.'}</div><div class="insight">These are index scores, not measured incident rates. Differences should be interpreted with the dataset methodology in mind.</div>`;
+}
+function comparison(data){let a=data.find(r=>r.Country===selected)||data[0],b=data.find(r=>r.Country===$('compare').value)||data[1];if(!a||!b)return;Plotly.newPlot('comparison',[{x:['Criminality','Markets','Actors','Resilience'],y:['Criminality_avg','Criminal_markets_avg','Criminal_actors_avg','Resilience_avg'].map(k=>val(a,k)),type:'bar',name:a.Country,marker:{color:'#42d6d0'}},{x:['Criminality','Markets','Actors','Resilience'],y:['Criminality_avg','Criminal_markets_avg','Criminal_actors_avg','Resilience_avg'].map(k=>val(b,k)),type:'bar',name:b.Country,marker:{color:'#e4a34e'}}],{...layout,barmode:'group',margin:{l:35,r:10,t:10,b:45},yaxis:{...layout.yaxis,range:[0,10]},legend:{orientation:'h',y:-.25}},{responsive:true,displayModeBar:false});}
+$('year').onchange=render;$('indicator').onchange=render;$('compare').onchange=()=>comparison(current());$('search').onchange=e=>{if(rows.some(r=>r.Country.toLowerCase()===e.target.value.toLowerCase())){selected=rows.find(r=>r.Country.toLowerCase()===e.target.value.toLowerCase()).Country;render()}};
+$('reset').onclick=()=>{$('year').value='2025';$('indicator').value='Criminality_avg';$('search').value='';selected='India';render()};
+async function init(){try{const res=await fetch(DATA_URL);if(!res.ok)throw Error('Dataset could not be downloaded ('+res.status+').');const csv=await res.text();const parsed=Papa.parse(csv,{header:true,dynamicTyping:true,skipEmptyLines:true});rows=parsed.data.filter(r=>r.Country&&r.Year);if(!rows.length)throw Error('Dataset loaded but no rows were found.');const names=[...new Set(rows.map(r=>r.Country))].sort();$('countries').innerHTML=names.map(n=>`<option value="${n}">`).join('');$('status').textContent='● Dataset connected · '+rows.length+' records';render()}catch(e){$('status').textContent='● Data connection issue';$('error').hidden=false;$('error').className='error';$('error').textContent='Could not load the dataset. Please check your internet connection and refresh. '+e.message;}}
+init();
+</script></body></html>
